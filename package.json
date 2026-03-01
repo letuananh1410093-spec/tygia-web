@@ -1,14 +1,6 @@
-{
-  "name": "tygia-web",
-  "version": "1.0.0",
-  "description": "Ty gia USD Vietcombank",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "axios": "^1.6.0",
-    "express": "^4.18.2",
-    "xml2js": "^0.6.2"
-  }
+"dependencies": {
+  "axios": "^1.6.0",
+  "express": "^4.18.2",
+  "xml2js": "^0.6.2",
+  "cheerio": "^1.0.0-rc.12"
 }
