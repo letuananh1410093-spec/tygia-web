@@ -3,20 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tỷ Giá USD</title>
+<title>So sánh tỷ giá USD</title>
 
 <style>
 body {
   font-family: Arial;
-  background: #f2f2f2;
+  background: #f4f6f9;
   padding: 20px;
 }
 
 .card {
   background: white;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 12px;
   margin-bottom: 20px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+
+h2 {
+  margin-bottom: 15px;
+}
+
+button {
+  padding: 8px 12px;
+  margin-right: 10px;
+  cursor: pointer;
 }
 
 table {
@@ -27,19 +38,26 @@ table {
 th, td {
   padding: 10px;
   border-bottom: 1px solid #ddd;
+  text-align: center;
 }
 
-.price-bank { color: blue; font-weight: bold; }
-.price-market { color: green; font-weight: bold; }
+th {
+  background: #f0f0f0;
+}
 
-input {
+.lowest {
+  background: #d4edda;
+  font-weight: bold;
+}
+
+select, input {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
 }
 
-.profit {
-  margin-top: 10px;
+.result {
+  margin-top: 15px;
   font-weight: bold;
   color: green;
 }
@@ -49,7 +67,11 @@ input {
 <body>
 
 <div class="card">
-  <h2>Tỷ giá USD các ngân hàng</h2>
+  <h2>So sánh tỷ giá USD hôm nay</h2>
+
+  <button onclick="sortLow()">Giá bán thấp → cao</button>
+  <button onclick="sortHigh()">Giá bán cao → thấp</button>
+
   <table>
     <thead>
       <tr>
@@ -63,59 +85,94 @@ input {
 </div>
 
 <div class="card">
-  <h2>Chợ đen</h2>
-  <p>Mua: <span id="market-buy" class="price-market"></span></p>
-  <p>Bán: <span id="market-sell" class="price-market"></span></p>
-</div>
+  <h2>Chọn nơi mua USD</h2>
 
-<div class="card">
-  <h2>Tính lợi nhuận</h2>
-  <input type="number" id="usd" placeholder="Nhập số USD" oninput="calc()">
-  <div class="profit" id="profit"></div>
+  <label>Chọn ngân hàng:</label>
+  <select id="bankSelect" onchange="updateSelectedBank()"></select>
+
+  <label>Nhập số USD:</label>
+  <input type="number" id="usdInput" placeholder="Ví dụ: 1000" oninput="calculateProfit()">
+
+  <div class="result" id="result"></div>
 </div>
 
 <script>
-let bankSell = 0;
-let marketBuy = 0;
+let banks = [];
+let selectedBankSell = 0;
 
 fetch("/api/tygia")
   .then(res => res.json())
   .then(data => {
+    banks = data.banks.map(b => ({
+      name: b.name,
+      buy: parseInt(b.buy.replace(/\D/g,'')),
+      sell: parseInt(b.sell.replace(/\D/g,''))
+    }));
 
-    const table = document.getElementById("bank-table");
-
-    data.banks.forEach(bank => {
-      const row = `
-        <tr>
-          <td>${bank.name}</td>
-          <td class="price-bank">${bank.buy}</td>
-          <td class="price-bank">${bank.sell}</td>
-        </tr>
-      `;
-      table.innerHTML += row;
-    });
-
-    document.getElementById("market-buy").innerText = data.blackMarket.buy;
-    document.getElementById("market-sell").innerText = data.blackMarket.sell;
-
-    // Lấy VCB làm mẫu tính lợi nhuận
-    const vcb = data.banks.find(b => b.name.includes("VCB"));
-    if (vcb) {
-      bankSell = parseInt(vcb.sell.replace(/\D/g, ""));
-      marketBuy = parseInt(data.blackMarket.buy.replace(/\D/g, ""));
-    }
+    renderTable();
+    populateDropdown();
   });
 
-function calc() {
-  const usd = document.getElementById("usd").value;
-  if (!usd || !bankSell || !marketBuy) return;
+function renderTable() {
+  const table = document.getElementById("bank-table");
+  table.innerHTML = "";
 
-  const cost = usd * bankSell;
-  const revenue = usd * marketBuy;
-  const profit = revenue - cost;
+  const lowestSell = Math.min(...banks.map(b => b.sell));
 
-  document.getElementById("profit").innerText =
-    "Lợi nhuận: " + profit.toLocaleString("vi-VN") + " VND";
+  banks.forEach(bank => {
+    const row = document.createElement("tr");
+
+    if (bank.sell === lowestSell) {
+      row.classList.add("lowest");
+    }
+
+    row.innerHTML = `
+      <td>${bank.name}</td>
+      <td>${bank.buy.toLocaleString()}</td>
+      <td>${bank.sell.toLocaleString()}</td>
+    `;
+
+    table.appendChild(row);
+  });
+}
+
+function populateDropdown() {
+  const select = document.getElementById("bankSelect");
+  select.innerHTML = "";
+
+  banks.forEach(bank => {
+    const option = document.createElement("option");
+    option.value = bank.sell;
+    option.textContent = bank.name + " - Bán: " + bank.sell.toLocaleString();
+    select.appendChild(option);
+  });
+
+  selectedBankSell = banks[0].sell;
+}
+
+function updateSelectedBank() {
+  selectedBankSell = parseInt(document.getElementById("bankSelect").value);
+  calculateProfit();
+}
+
+function calculateProfit() {
+  const usd = parseFloat(document.getElementById("usdInput").value);
+  if (!usd || !selectedBankSell) return;
+
+  const total = usd * selectedBankSell;
+
+  document.getElementById("result").innerText =
+    "Tổng tiền phải trả: " + total.toLocaleString("vi-VN") + " VND";
+}
+
+function sortLow() {
+  banks.sort((a,b) => a.sell - b.sell);
+  renderTable();
+}
+
+function sortHigh() {
+  banks.sort((a,b) => b.sell - a.sell);
+  renderTable();
 }
 </script>
 
