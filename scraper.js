@@ -1,44 +1,51 @@
-const puppeteer = require("puppeteer");
+const axios = require("axios");
+const cheerio = require("cheerio");
 
-async function getDataFromTygiaUSD() {
-  const browser = await puppeteer.launch({
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+async function getRates() {
+  const { data } = await axios.get("https://tygiausd.org/ngoaite/usd");
+  const $ = cheerio.load(data);
 
-  const page = await browser.newPage();
+  let banks = [];
+  let blackBuy = "";
+  let blackSell = "";
 
-  await page.goto("https://tygiausd.org/", {
-    waitUntil: "networkidle2",
-  });
+  // ===== LẤY GIÁ CHỢ ĐEN =====
+  $("h2:contains('Giá đô la chợ đen')")
+    .next("table")
+    .find("tbody tr")
+    .each((i, el) => {
+      const tds = $(el).find("td");
+      blackBuy = $(tds[1]).text().trim().replace(/,/g, "");
+      blackSell = $(tds[2]).text().trim().replace(/,/g, "");
+    });
 
-  const result = await page.evaluate(() => {
-    const data = {};
+  // ===== LẤY TẤT CẢ NGÂN HÀNG =====
+  $("table tbody tr").each((i, el) => {
+    const cols = $(el).find("td");
 
-    // === Vietcombank ===
-    const vcbRow = document.querySelector(
-      "table#exchange-table tbody tr:nth-child(1)" // chỉnh selector nếu cần
-    );
-    if (vcbRow) {
-      const tds = vcbRow.querySelectorAll("td");
-      data.vietcombankBuy = tds[1]?.innerText.trim();
-      data.vietcombankSell = tds[3]?.innerText.trim(); // tùy cấu trúc
+    if (cols.length >= 5) {
+      const name = $(cols[1]).text().trim();
+      const buy = $(cols[2]).text().trim().replace(/,/g, "");
+      const sell = $(cols[4]).text().trim().replace(/,/g, "");
+
+      if (name && sell !== "-") {
+        banks.push({
+          name,
+          buy: Number(buy),
+          sell: Number(sell)
+        });
+      }
     }
-
-    // === Chợ đen ===
-    const blackRow = document.querySelector(
-      "table#black-market tbody tr"
-    );
-    if (blackRow) {
-      const tds2 = blackRow.querySelectorAll("td");
-      data.blackBuy = tds2[1]?.innerText.trim();
-      data.blackSell = tds2[2]?.innerText.trim();
-    }
-
-    return data;
   });
 
-  await browser.close();
-  return result;
+  // Sắp xếp từ cao → thấp theo giá bán
+  banks.sort((a, b) => b.sell - a.sell);
+
+  return {
+    blackBuy: Number(blackBuy),
+    blackSell: Number(blackSell),
+    banks
+  };
 }
 
-module.exports = getDataFromTygiaUSD;
+module.exports = getRates;
