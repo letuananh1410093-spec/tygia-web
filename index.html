@@ -1,179 +1,116 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>So sánh tỷ giá USD</title>
-
+<meta charset="UTF-8" />
+<title>So Sánh Tỷ Giá USD</title>
 <style>
-body {
-  font-family: Arial;
-  background: #f4f6f9;
-  padding: 20px;
-}
-
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.05);
-}
-
-h2 {
-  margin-bottom: 15px;
-}
-
-button {
-  padding: 8px 12px;
-  margin-right: 10px;
-  cursor: pointer;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-  text-align: center;
-}
-
-th {
-  background: #f0f0f0;
-}
-
-.lowest {
-  background: #d4edda;
-  font-weight: bold;
-}
-
-select, input {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-}
-
-.result {
-  margin-top: 15px;
-  font-weight: bold;
-  color: green;
-}
+body { font-family: Arial; background:#f4f6f9; }
+.container { max-width:1000px; margin:30px auto; background:white; padding:20px; border-radius:10px; }
+table { width:100%; border-collapse: collapse; margin-bottom:20px;}
+th, td { border:1px solid #ddd; padding:10px; text-align:center; }
+th { background:#007bff; color:white; }
+h1 { text-align:center; }
+select, input, button { padding:8px; margin:5px 0; }
+.result { font-weight:bold; margin-top:10px; }
 </style>
 </head>
-
 <body>
 
-<div class="card">
-  <h2>So sánh tỷ giá USD hôm nay</h2>
+<div class="container">
+<h1>💵 So Sánh Tỷ Giá USD</h1>
 
-  <button onclick="sortLow()">Giá bán thấp → cao</button>
-  <button onclick="sortHigh()">Giá bán cao → thấp</button>
+<h3>📊 Bảng Ngân Hàng (Cao → Thấp)</h3>
+<table>
+<thead>
+<tr>
+<th>Ngân Hàng</th>
+<th>Giá Mua</th>
+<th>Giá Bán</th>
+</tr>
+</thead>
+<tbody id="bankTable"></tbody>
+</table>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Ngân hàng</th>
-        <th>Mua</th>
-        <th>Bán</th>
-      </tr>
-    </thead>
-    <tbody id="bank-table"></tbody>
-  </table>
-</div>
+<h3>🧮 Tính Lợi Nhuận</h3>
 
-<div class="card">
-  <h2>Chọn nơi mua USD</h2>
+<label>Chọn ngân hàng:</label><br>
+<select id="bankSelect"></select><br>
 
-  <label>Chọn ngân hàng:</label>
-  <select id="bankSelect" onchange="updateSelectedBank()"></select>
+<label>Nhập số tiền VND mua USD:</label><br>
+<input type="number" id="moneyInput" placeholder="Ví dụ: 100000000"><br>
 
-  <label>Nhập số USD:</label>
-  <input type="number" id="usdInput" placeholder="Ví dụ: 1000" oninput="calculateProfit()">
+<button onclick="calculate()">Tính Lợi Nhuận</button>
 
-  <div class="result" id="result"></div>
+<div class="result" id="result"></div>
+
+<hr>
+
+<h3>💰 Giá Chợ Đen</h3>
+<p>Mua vào: <span id="blackBuy"></span></p>
+<p>Bán ra: <span id="blackSell"></span></p>
+
 </div>
 
 <script>
 let banks = [];
-let selectedBankSell = 0;
+let blackBuy = 0;
 
-fetch("/api/tygia")
-  .then(res => res.json())
-  .then(data => {
-    banks = data.banks.map(b => ({
-      name: b.name,
-      buy: parseInt(b.buy.replace(/\D/g,'')),
-      sell: parseInt(b.sell.replace(/\D/g,''))
-    }));
+async function loadData() {
+  const res = await fetch("/api/rates");
+  const data = await res.json();
 
-    renderTable();
-    populateDropdown();
-  });
+  banks = data.banks;
+  blackBuy = data.blackBuy;
 
-function renderTable() {
-  const table = document.getElementById("bank-table");
-  table.innerHTML = "";
+  document.getElementById("blackBuy").innerText = data.blackBuy.toLocaleString();
+  document.getElementById("blackSell").innerText = data.blackSell.toLocaleString();
 
-  const lowestSell = Math.min(...banks.map(b => b.sell));
-
-  banks.forEach(bank => {
-    const row = document.createElement("tr");
-
-    if (bank.sell === lowestSell) {
-      row.classList.add("lowest");
-    }
-
-    row.innerHTML = `
-      <td>${bank.name}</td>
-      <td>${bank.buy.toLocaleString()}</td>
-      <td>${bank.sell.toLocaleString()}</td>
-    `;
-
-    table.appendChild(row);
-  });
-}
-
-function populateDropdown() {
+  const table = document.getElementById("bankTable");
   const select = document.getElementById("bankSelect");
+
+  table.innerHTML = "";
   select.innerHTML = "";
 
   banks.forEach(bank => {
-    const option = document.createElement("option");
-    option.value = bank.sell;
-    option.textContent = bank.name + " - Bán: " + bank.sell.toLocaleString();
-    select.appendChild(option);
+    table.innerHTML += `
+      <tr>
+        <td>${bank.name}</td>
+        <td>${bank.buy.toLocaleString()}</td>
+        <td>${bank.sell.toLocaleString()}</td>
+      </tr>
+    `;
+
+    select.innerHTML += `
+      <option value="${bank.sell}">
+        ${bank.name} - ${bank.sell.toLocaleString()}
+      </option>
+    `;
   });
-
-  selectedBankSell = banks[0].sell;
 }
 
-function updateSelectedBank() {
-  selectedBankSell = parseInt(document.getElementById("bankSelect").value);
-  calculateProfit();
+function calculate() {
+  const money = Number(document.getElementById("moneyInput").value);
+  const bankSell = Number(document.getElementById("bankSelect").value);
+
+  if (!money) {
+    alert("Nhập số tiền!");
+    return;
+  }
+
+  const usdBought = money / bankSell;
+  const vndSellBlack = usdBought * blackBuy;
+  const profit = vndSellBlack - money;
+
+  document.getElementById("result").innerHTML = `
+    Mua được: ${usdBought.toFixed(2)} USD<br>
+    Bán chợ đen thu về: ${vndSellBlack.toLocaleString()} VND<br>
+    <span style="color:${profit>0?'green':'red'}">
+      Lợi nhuận: ${profit.toLocaleString()} VND
+    </span>
+  `;
 }
 
-function calculateProfit() {
-  const usd = parseFloat(document.getElementById("usdInput").value);
-  if (!usd || !selectedBankSell) return;
-
-  const total = usd * selectedBankSell;
-
-  document.getElementById("result").innerText =
-    "Tổng tiền phải trả: " + total.toLocaleString("vi-VN") + " VND";
-}
-
-function sortLow() {
-  banks.sort((a,b) => a.sell - b.sell);
-  renderTable();
-}
-
-function sortHigh() {
-  banks.sort((a,b) => b.sell - a.sell);
-  renderTable();
-}
+loadData();
 </script>
 
 </body>
