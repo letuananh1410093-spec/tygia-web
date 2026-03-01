@@ -5,13 +5,21 @@ const getTyGiaUSD = require("./scraper");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, "public")));
+// Route trang chủ
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
 
+// API lấy dữ liệu
 app.get("/api/tygia", async (req, res) => {
-  const data = await getTyGiaUSD();
-  res.json(data);
+  try {
+    const data = await getTyGiaUSD();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Lỗi lấy dữ liệu" });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("Server chạy ở port " + PORT);
 });
