@@ -1,165 +1,122 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tỷ Giá USD & Tính Chênh Lệch Chợ Đen</title>
-    <style>
-        :root {
-            --primary: #2e7d32; /* Màu xanh lá (lợi nhuận) */
-            --secondary: #1976d2;
-            --danger: #d32f2f;
-            --bg: #f0f2f5;
-        }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 450px;
-        }
-        .card {
-            background: #fff;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        h2 {
-            margin-top: 0;
-            font-size: 1.1rem;
-            color: #333;
-            border-left: 5px solid var(--secondary);
-            padding-left: 10px;
-            text-transform: uppercase;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-        th { text-align: left; font-size: 0.8rem; color: #777; padding: 8px; border-bottom: 2px solid #eee; }
-        td { padding: 12px 8px; border-bottom: 1px solid #eee; font-weight: bold; }
-        
-        .price-up { color: var(--primary); }
-        .price-bank { color: var(--secondary); }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tỷ Giá USD</title>
 
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 0.85rem; margin-bottom: 8px; color: #555; }
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            box-sizing: border-box;
-            outline: none;
-        }
-        input:focus { border-color: var(--secondary); }
+<style>
+body {
+  font-family: Arial;
+  background: #f2f2f2;
+  padding: 20px;
+}
 
-        .profit-box {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px dashed var(--primary);
-            margin-top: 10px;
-        }
-        .profit-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            font-size: 0.95rem;
-        }
-        .profit-value { color: var(--primary); font-weight: 800; font-size: 1.2rem; }
-        .hint { font-size: 0.75rem; color: #888; font-style: italic; margin-top: 10px; }
-    </style>
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.price-bank { color: blue; font-weight: bold; }
+.price-market { color: green; font-weight: bold; }
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.profit {
+  margin-top: 10px;
+  font-weight: bold;
+  color: green;
+}
+</style>
 </head>
+
 <body>
 
-<div class="container">
-    <div class="card">
-        <h2>Tỷ Giá Tham Khảo</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nguồn</th>
-                    <th>Mua vào</th>
-                    <th>Bán ra</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Ngân hàng (VCB)</td>
-                    <td class="price-bank">25.210</td>
-                    <td id="bank-sell" class="price-bank">25.520</td>
-                </tr>
-                <tr>
-                    <td>Chợ đen (Tự do)</td>
-                    <td id="market-buy" class="price-up">25.750</td>
-                    <td class="price-up">25.830</td>
-                </tr>
-            </tbody>
-        </table>
-        <div class="hint">* Bạn mua của ngân hàng giá <b>25.520</b> và bán lại cho chợ đen giá <b>25.750</b></div>
-    </div>
+<div class="card">
+  <h2>Tỷ giá USD các ngân hàng</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Ngân hàng</th>
+        <th>Mua</th>
+        <th>Bán</th>
+      </tr>
+    </thead>
+    <tbody id="bank-table"></tbody>
+  </table>
+</div>
 
-    <div class="card">
-        <h2>Tính Lợi Nhuận Chênh Lệch</h2>
-        <div class="input-group">
-            <label>Số tiền USD bạn muốn mua từ ngân hàng:</label>
-            <input type="number" id="usd-amount" placeholder="Ví dụ: 1000" oninput="calculateProfit()">
-        </div>
+<div class="card">
+  <h2>Chợ đen</h2>
+  <p>Mua: <span id="market-buy" class="price-market"></span></p>
+  <p>Bán: <span id="market-sell" class="price-market"></span></p>
+</div>
 
-        <div class="profit-box">
-            <div class="profit-row">
-                <span>Vốn bỏ ra (Ngân hàng):</span>
-                <span id="cost-vcb">0 VND</span>
-            </div>
-            <div class="profit-row">
-                <span>Thu về (Chợ đen):</span>
-                <span id="revenue-market">0 VND</span>
-            </div>
-            <hr style="border: 0; border-top: 1px solid #ccc;">
-            <div class="profit-row">
-                <span style="font-weight: bold;">Lợi nhuận chênh lệch:</span>
-                <span id="total-profit" class="profit-value">0 VND</span>
-            </div>
-        </div>
-        <p class="hint">Chênh lệch hiện tại: 230đ mỗi 1 USD</p>
-    </div>
+<div class="card">
+  <h2>Tính lợi nhuận</h2>
+  <input type="number" id="usd" placeholder="Nhập số USD" oninput="calc()">
+  <div class="profit" id="profit"></div>
 </div>
 
 <script>
-    // Các thông số tỷ giá (Bạn có thể sửa số ở đây để cập nhật)
-    const BANK_SELL_RATE = 25520;  // Giá ngân hàng bán ra
-    const MARKET_BUY_RATE = 25750; // Giá chợ đen mua vào
+let bankSell = 0;
+let marketBuy = 0;
 
-    function calculateProfit() {
-        const usd = document.getElementById('usd-amount').value;
-        const costEl = document.getElementById('cost-vcb');
-        const revenueEl = document.getElementById('revenue-market');
-        const profitEl = document.getElementById('total-profit');
+fetch("/api/tygia")
+  .then(res => res.json())
+  .then(data => {
 
-        if (!usd || usd <= 0) {
-            costEl.innerText = "0 VND";
-            revenueEl.innerText = "0 VND";
-            profitEl.innerText = "0 VND";
-            return;
-        }
+    const table = document.getElementById("bank-table");
 
-        const cost = usd * BANK_SELL_RATE;
-        const revenue = usd * MARKET_BUY_RATE;
-        const profit = revenue - cost;
+    data.banks.forEach(bank => {
+      const row = `
+        <tr>
+          <td>${bank.name}</td>
+          <td class="price-bank">${bank.buy}</td>
+          <td class="price-bank">${bank.sell}</td>
+        </tr>
+      `;
+      table.innerHTML += row;
+    });
 
-        costEl.innerText = cost.toLocaleString('vi-VN') + " VND";
-        revenueEl.innerText = revenue.toLocaleString('vi-VN') + " VND";
-        profitEl.innerText = "+" + profit.toLocaleString('vi-VN') + " VND";
+    document.getElementById("market-buy").innerText = data.blackMarket.buy;
+    document.getElementById("market-sell").innerText = data.blackMarket.sell;
+
+    // Lấy VCB làm mẫu tính lợi nhuận
+    const vcb = data.banks.find(b => b.name.includes("VCB"));
+    if (vcb) {
+      bankSell = parseInt(vcb.sell.replace(/\D/g, ""));
+      marketBuy = parseInt(data.blackMarket.buy.replace(/\D/g, ""));
     }
+  });
+
+function calc() {
+  const usd = document.getElementById("usd").value;
+  if (!usd || !bankSell || !marketBuy) return;
+
+  const cost = usd * bankSell;
+  const revenue = usd * marketBuy;
+  const profit = revenue - cost;
+
+  document.getElementById("profit").innerText =
+    "Lợi nhuận: " + profit.toLocaleString("vi-VN") + " VND";
+}
 </script>
 
 </body>
