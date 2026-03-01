@@ -1,25 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Tỷ giá USD Vietcombank</title>
-</head>
-<body>
-    <h1>Tỷ giá USD - Vietcombank</h1>
-    <div id="rate">Đang tải...</div>
+<script>
+fetch("/api/tygia")
+  .then(res => res.json())
+  .then(data => {
+    let html = "<table border='1' cellpadding='5'>";
+    html += "<tr><th>Ngân hàng</th><th>Mua</th><th>Bán</th></tr>";
 
-    <script>
-        fetch("/api/tygia")
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById("rate").innerHTML =
-                    "Mua tiền mặt: " + data.buy_cash + "<br>" +
-                    "Mua chuyển khoản: " + data.buy_transfer + "<br>" +
-                    "Bán: " + data.sell;
-            })
-            .catch(() => {
-                document.getElementById("rate").innerHTML = "Lỗi tải dữ liệu";
-            });
-    </script>
-</body>
-</html>
+    data.forEach(item => {
+      html += `<tr>
+        <td>${item.bank}</td>
+        <td>${item.buy}</td>
+        <td>${item.sell}</td>
+      </tr>`;
+    });
+
+    html += "</table>";
+    document.getElementById("rate").innerHTML = html;
+  })
+  .catch(() => {
+    document.getElementById("rate").innerHTML = "Lỗi tải dữ liệu";
+  });
+</script>
