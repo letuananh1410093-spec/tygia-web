@@ -1,40 +1,44 @@
-const axios = require("axios");
-const cheerio = require("cheerio");
+const puppeteer = require("puppeteer");
 
-async function getTyGiaUSD() {
-  try {
-    const { data } = await axios.get("https://tygiausd.org/");
-    const $ = cheerio.load(data);
+async function getDataFromTygiaUSD() {
+  const browser = await puppeteer.launch({
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 
-    const banks = [];
+  const page = await browser.newPage();
 
-    $("table tbody tr").each((i, el) => {
-      const tds = $(el).find("td");
+  await page.goto("https://tygiausd.org/", {
+    waitUntil: "networkidle2",
+  });
 
-      if (tds.length >= 3) {
-        banks.push({
-          name: $(tds[0]).text().trim(),
-          buy: $(tds[1]).text().trim(),
-          sell: $(tds[2]).text().trim(),
-        });
-      }
-    });
+  const result = await page.evaluate(() => {
+    const data = {};
 
-    // Giá chợ đen (bạn có thể chỉnh selector nếu cần)
-    const blackMarketBuy = $(".black-market .buy").text().trim() || "Đang cập nhật";
-    const blackMarketSell = $(".black-market .sell").text().trim() || "Đang cập nhật";
+    // === Vietcombank ===
+    const vcbRow = document.querySelector(
+      "table#exchange-table tbody tr:nth-child(1)" // chỉnh selector nếu cần
+    );
+    if (vcbRow) {
+      const tds = vcbRow.querySelectorAll("td");
+      data.vietcombankBuy = tds[1]?.innerText.trim();
+      data.vietcombankSell = tds[3]?.innerText.trim(); // tùy cấu trúc
+    }
 
-    return {
-      banks,
-      blackMarket: {
-        buy: blackMarketBuy,
-        sell: blackMarketSell,
-      },
-    };
-  } catch (error) {
-    console.log(error.message);
-    return { error: "Không lấy được dữ liệu" };
-  }
+    // === Chợ đen ===
+    const blackRow = document.querySelector(
+      "table#black-market tbody tr"
+    );
+    if (blackRow) {
+      const tds2 = blackRow.querySelectorAll("td");
+      data.blackBuy = tds2[1]?.innerText.trim();
+      data.blackSell = tds2[2]?.innerText.trim();
+    }
+
+    return data;
+  });
+
+  await browser.close();
+  return result;
 }
 
-module.exports = getTyGiaUSD;
+module.exports = getDataFromTygiaUSD;
